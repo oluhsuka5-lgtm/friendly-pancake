@@ -1,9 +1,15 @@
-FROM alpine:latest
+FROM debian:bullseye-slim
 
-# Устанавливаем xray и curl
-RUN apk add --no-cache xray curl
+# Устанавливаем нужные программы для скачивания
+RUN apt-get update && apt-get install -y curl unzip
 
-# Копируем конфигурацию (мы создадим её прямо в Dockerfile для простоты)
+# Скачиваем Xray напрямую с официального сайта
+RUN curl -L -o xray.zip https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip \
+    && unzip xray.zip -d /usr/local/bin/ \
+    && chmod +x /usr/local/bin/xray \
+    && rm xray.zip
+
+# Создаем конфиг
 RUN mkdir -p /etc/xray
 RUN echo '{\
   "log": { "loglevel": "warning" },\
@@ -25,5 +31,5 @@ RUN echo '{\
   }]\
 }' > /etc/xray/config.json
 
-# Railway передает порт через переменную среды PORT, подменим его перед запуском
-CMD sed -i "s/8080/$PORT/g" /etc/xray/config.json && xray run -c /etc/xray/config.json
+# Подменяем порт и запускаем
+CMD sed -i "s/8080/$PORT/g" /etc/xray/config.json && /usr/local/bin/xray run -c /etc/xray/config.json
